@@ -1,0 +1,79 @@
+---
+title: "Analysis for CR Paper - Cross-country comparison"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,  message=FALSE, warning=FALSE, fig.retina = 4)
+```
+
+```{r}
+# Libraries
+pacman::p_load(tidyverse, haven, texreg, estimatr, survey, srvyr)
+
+# Parameters
+df_all <- read_dta(here::here("data", "x_ee.dta")) %>% as_survey_design(univcode, weights = sw_f)
+
+#df_all %>% glimpse()
+```
+
+
+## All
+
+```{r}
+lm1 <-
+  df_all %>%
+  filter(country == "Russia" & !is.na(z_flexibility) & grade == 1 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_flexibility ~ 1, design = .)
+
+lm2 <-
+  df_all %>%
+  filter(country == "Russia" & !is.na(z_flexibility) & grade == 3 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_flexibility ~ 1, design = .)
+
+lm3 <-
+  df_all %>%
+  filter(country == "Russia" & !is.na(z_flexibility) & grade == 3 & endline == 1 & stu_merge != 1) %>% 
+  svyglm(z_flexibility ~ 1, design = .)
+
+lm4 <-
+  df_all %>% 
+  filter(country == "Russia" & !is.na(z_flexibility) & grade == 3 & stu_merge == 3) %>% 
+  svyglm(z_flexibility ~ endline, design = .)
+
+htmlreg(list(lm1, lm2, lm3, lm4), file = "test.html", include.ci = F)
+```
+
+
+
+```{r}
+lm5 <-
+  df_all %>%
+  filter(!is.na(z_flexibility) & grade == 1 & endline == 0) %>% 
+  svyglm(z_flexibility ~ country, design = .)
+
+lm6 <-
+  df_all %>%
+  filter(!is.na(z_flexibility) & grade == 3 & endline == 0) %>% 
+  svyglm(z_flexibility ~ country, design = .)
+
+lm7 <-
+  df_all %>%
+  filter(!is.na(z_flexibility) & grade == 3 & endline == 1) %>% 
+  svyglm(z_flexibility ~ country, design = .)
+
+htmlreg(list(lm5, lm6, lm7), file = "test.html", include.ci = F)
+```
+
+
+
+
+
+
+
+
+
+
