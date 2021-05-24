@@ -18,8 +18,7 @@ pacman::p_load(tidyverse, haven, texreg, estimatr)
 
 # sections needed only if using diversity as treatment
 sections <-
-  read_dta(here::here("37deps", "37_deps_appended.dta")) %>% 
-  filter(subject != "other") %>%
+  read_dta(here::here("37deps", "37copy.dta")) %>% 
   distinct(stdid, course_name, .keep_all = T) %>% 
   filter(ea_stud_group_criteria == 2, grade == 4) %>% 
   drop_na(reservation) %>% 
@@ -33,8 +32,7 @@ sections <-
 
 
 df_long <- 
-  read_dta(here::here("37deps", "37_deps_appended.dta")) %>% 
-  filter(subject != "other") %>% 
+  read_dta(here::here("37deps", "37copy.dta")) %>% 
   left_join(sections, by = c("classid", "course_name", "facid")) %>% 
   mutate(
     stu_diversity = if_else(reservation == 0, stu_res_section, 1 - stu_res_section),
@@ -49,20 +47,22 @@ df <-
   df_long %>% 
   mutate(univcode = str_sub(department_id, 1, 5)) %>% 
   group_by(stdid, univcode, z_fluency, z_uniqueness, z_flexibility, female, age, father_college, mother_college, ses, reservation, classid, grade) %>% 
-  summarize(
-    # teach
-    z_activefac = sum(tpi_score3 * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE), # change as needed
-    bfac_hours_teach_under = sum(bfac_hours_teach_under * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
-    bfac_hours_teaching = sum(bfac_hours_teaching * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
-    # research
-    bfac_research_participation = sum(research_participation * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
-    bfac_hours_research = sum(bfac_hours_research * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
-    bfac_underrsch = sum(bfac_underrsch * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
-    bfac_publications = sum(bfac_publications * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
-    # stu diversity
-    stu_diversity = sum(stu_diversity * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE)
-  ) %>% 
-  ungroup()
+  # summarize(
+  #   # teach
+  #   z_activefac = sum(tpi_score3 * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE), # change as needed
+  #   bfac_hours_teach_under = sum(bfac_hours_teach_under * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+  #   bfac_hours_teaching = sum(bfac_hours_teaching * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+  #   # research
+  #   bfac_research_participation = sum(research_participation * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+  #   bfac_hours_research = sum(bfac_hours_research * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+  #   bfac_underrsch = sum(bfac_underrsch * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+  #   bfac_publications = sum(bfac_publications * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+  #   # stu diversity
+  #   stu_diversity = sum(stu_diversity * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE)
+  # ) %>% 
+  summarize_at(vars(contains("tpi")), ~ sum(. * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE)) %>%
+  ungroup() %>% 
+  mutate_at(vars(contains("tpi")), ~ scale(.) %>% as.vector)
 ```
 
 
@@ -241,6 +241,35 @@ lm3 <-
 
 screenreg(list(lm1, lm2, lm3), custom.note = "%stars \n All continuous variables are standardized. \n All models control for student background characteristics. \n Standard errors clustered at department level.", omit.coef = "(female)|(college)|(ses)|(age)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1), custom.model.names = c("Fluency", "Uniqueness", "Flexibility"))
 ```
+
+
+
+
+```{r}
+lm1 <-
+  df %>% 
+  lm_robust(z_fluency ~ tpi_average_demos + female + age + father_college + mother_college + ses, se_type = "stata", clusters = classid, data = .)
+
+lm2 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ tpi_average_demos + female + age + father_college + mother_college + ses, se_type = "stata", clusters = classid, data = .)
+
+lm3 <-
+  df %>% 
+  lm_robust(z_flexibility ~ tpi_average_demos + female + age + father_college + mother_college + ses, se_type = "stata", clusters = classid, data = .)
+
+
+screenreg(list(lm1, lm2, lm3), custom.note = "%stars \n All continuous variables are standardized. \n All models control for student background characteristics. \n Standard errors clustered at department level.", omit.coef = "(female)|(college)|(ses)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1), custom.model.names = c("Fluency", "Uniqueness", "Flexibility"))
+```
+
+
+
+
+
+
+
+
+
 
 
 
