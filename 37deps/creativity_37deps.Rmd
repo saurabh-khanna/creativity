@@ -1,10 +1,11 @@
 ---
-title: "Experimental Analysis -- Creativity"
-date: "`r Sys.Date()`"
-output: 
+title: 'Part 2: Experimental Analysis'
+date: "June 16, 2021`"
+output:
   pdf_document:
-    toc: true
+    toc: yes
     toc_depth: 4
+    keep_tex: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -16,34 +17,18 @@ knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.retina
 # Libraries
 pacman::p_load(tidyverse, haven, texreg, estimatr)
 
-# sections needed only if using diversity as treatment
-# sections <-
-#   read_dta(here::here("37deps", "37copy.dta")) %>% 
-#   distinct(stdid, course_name, .keep_all = T) %>% 
-#   filter(ea_stud_group_criteria == 2, grade == 4) %>% 
-#   drop_na(reservation) %>% 
-#   group_by(classid, course_name, facid) %>% 
-#   summarise(
-#     stu_res_section = mean(reservation, na.rm = TRUE),
-#     n_stu = n()
-#   ) %>%
-#   ungroup() %>% 
-#   filter(n_stu > 1)
-
 
 df_long <- 
   read_dta(here::here("37deps", "37copy.dta")) %>% 
-  # left_join(sections, by = c("classid", "course_name", "facid")) %>% 
   mutate(
-    # stu_diversity = if_else(reservation == 0, stu_res_section, 1 - stu_res_section),
     bfac_hours_teach_under = bfac_hours_teaching * bfac_undertcheffort,
-    bfac_publications_dummy = if_else(bfac_publications > 0, 1, 0)
+    bfac_publications_dummy = if_else(bfac_publications > 0, 1, 0) # unused
   )
 
 df <-
   df_long %>% 
   mutate(univcode = str_sub(department_id, 1, 5)) %>% 
-  group_by(stdid, univcode, z_fluency, z_uniqueness, z_flexibility, femaleb, femalemiss, ageb, agemiss, father_collegeb, father_collegemiss, mother_collegeb, mother_collegemiss, sesb, sesmiss, b_i_jeemain_scoreb, b_i_jeemain_scoremiss, b_i_jeemain_score_mathb, b_i_jeemain_score_mathmiss, b_i_jeemain_score_physb, b_i_jeemain_score_physmiss, reservation, classid, department_id, grade) %>% 
+  group_by(stdid, univcode, z_fluency, z_uniqueness, z_flexibility, female, age, father_college, mother_college, ses, b_i_jeemain_score_math, b_i_jeemain_score_phys, femaleb, femalemiss, ageb, agemiss, father_collegeb, father_collegemiss, mother_collegeb, mother_collegemiss, sesb, sesmiss, b_i_jeemain_scoreb, b_i_jeemain_scoremiss, b_i_jeemain_score_mathb, b_i_jeemain_score_mathmiss, b_i_jeemain_score_physb, b_i_jeemain_score_physmiss, reservation, classid, department_id, grade) %>% 
   summarize(
     # teach
     z_activefac = sum(x13 * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE), # change as needed
@@ -54,199 +39,238 @@ df <-
     bfac_hours_research = sum(bfac_hours_research * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
     bfac_underrsch = sum(bfac_underrsch * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
     bfac_publications = sum(bfac_publications * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
-    bfac_publications_dummy = sum(bfac_publications_dummy * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
-    # stu diversity
-    # stu_diversity = sum(stu_diversity * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE)
+    bfac_publications_dummy = sum(bfac_publications_dummy * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE) # unused
   ) %>%
-  # summarize_at(vars(contains("tpi")), ~ sum(. * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE)) %>%
-  ungroup() %>%
+  ungroup() %>% 
+  mutate_at(
+    vars("z_activefac", "bfac_hours_teach_under", "bfac_hours_teaching", "bfac_research_participation", "bfac_hours_research", "bfac_underrsch", contains("score")),
+    ~ scale(.) %>% as.vector
+  ) %>% 
   mutate(
     bfac_log_publications = log(bfac_publications)
-  ) %>% 
-  mutate_at(
-    vars("z_activefac", "bfac_hours_teach_under", "bfac_hours_teaching", "bfac_research_participation", "bfac_hours_research", "bfac_underrsch", "bfac_publications", contains("score")),
-    ~ scale(.) %>% as.vector
   )
 
 # df %>% write_dta(here::here("37deps","test.dta"), version = 13)
+```
 
-df %>% 
-  ggplot(aes(bfac_publications_dummy)) +
-  geom_histogram() +
-  hrbrthemes::theme_ipsum()
 
-df %>% 
-  count(bfac_publications_dummy) %>% arrange(-n)
+\newpage
+
+
+# Research results
+
+## Fluency
+
+```{r}
+lm0 <-
+  df %>% 
+  lm_robust(z_fluency ~ bfac_log_publications + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid, data = .)
+
+lm1 <-
+  df %>% 
+  lm_robust(z_fluency ~ bfac_log_publications + bfac_research_participation + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+lm2 <-
+  df %>% 
+  lm_robust(z_fluency ~ bfac_log_publications + bfac_research_participation + bfac_hours_research + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+lm3 <-
+  df %>% 
+  lm_robust(z_fluency ~ bfac_log_publications + bfac_research_participation + bfac_hours_research + bfac_underrsch + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+
+screenreg(list(lm0, lm1, lm2, lm3), custom.note = "%stars \n All continuous variables are standardized. \n All models control for student background characteristics and department fixed effects.", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1))
+```
+
+\newpage
+
+## Uniqueness
+
+```{r}
+lm0 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ bfac_log_publications + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid, data = .)
+
+lm1 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ bfac_log_publications + bfac_research_participation + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+lm2 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ bfac_log_publications + bfac_research_participation + bfac_hours_research + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+lm3 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ bfac_log_publications + bfac_research_participation + bfac_hours_research + bfac_underrsch + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+
+screenreg(list(lm0, lm1, lm2, lm3), custom.note = "%stars \n All continuous variables are standardized. \n All models control for student background characteristics and department fixed effects.", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1))
+```
+
+\newpage
+
+## Flexibility
+
+```{r}
+lm0 <-
+  df %>% 
+  lm_robust(z_flexibility ~ bfac_log_publications + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid, data = .)
+
+lm1 <-
+  df %>% 
+  lm_robust(z_flexibility ~ bfac_log_publications + bfac_research_participation + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+lm2 <-
+  df %>% 
+  lm_robust(z_flexibility ~ bfac_log_publications + bfac_research_participation + bfac_hours_research + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+lm3 <-
+  df %>% 
+  lm_robust(z_flexibility ~ bfac_log_publications + bfac_research_participation + bfac_hours_research + bfac_underrsch + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+
+screenreg(list(lm0, lm1, lm2, lm3), custom.note = "%stars \n All continuous variables are standardized. \n All models control for student background characteristics and department fixed effects.", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1))
 ```
 
 
 
-```{r, eval=F}
-# randomization checks
+\newpage
+
+# Teaching results
+
+## Fluency
+
+```{r}
+lm1 <-
+  df %>% 
+  lm_robust(z_fluency ~ z_activefac + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+lm2 <-
+  df %>% 
+  lm_robust(z_fluency ~ z_activefac + bfac_hours_teaching + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+lm3 <-
+  df %>% 
+  lm_robust(z_fluency ~ z_activefac + bfac_hours_teaching + bfac_hours_teach_under + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+
+screenreg(list(lm1, lm2, lm3), custom.note = "%stars \n All continuous variables are standardized. \n All models control for student background characteristics and department fixed effects.", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1))
+```
+
+\newpage
+
+## Uniqueness
+
+```{r}
+lm1 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ z_activefac + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+lm2 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ z_activefac + bfac_hours_teaching + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+lm3 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ z_activefac + bfac_hours_teaching + bfac_hours_teach_under + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+
+screenreg(list(lm1, lm2, lm3), custom.note = "%stars \n All continuous variables are standardized. \n All models control for student background characteristics and department fixed effects.", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1))
+```
+
+\newpage
+
+## Flexibility
+
+```{r}
+lm1 <-
+  df %>% 
+  lm_robust(z_flexibility ~ z_activefac + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+lm2 <-
+  df %>% 
+  lm_robust(z_flexibility ~ z_activefac + bfac_hours_teaching + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+lm3 <-
+  df %>% 
+  lm_robust(z_flexibility ~ z_activefac + bfac_hours_teaching + bfac_hours_teach_under + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+
+screenreg(list(lm1, lm2, lm3), custom.note = "%stars \n All continuous variables are standardized. \n All models control for student background characteristics and department fixed effects.", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1))
+```
+
+\newpage
+
+# Balance checks
+
+## Research treatments
+
+<br/>
+Publications:
+
+```{r}
 df %>%
-  lm_robust(bfac_log_publications ~ femaleb + ageb + father_collegeb + mother_collegeb + sesb + b_i_jeemain_score_mathb + b_i_jeemain_score_physb, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .) %>% 
+  lm_robust(bfac_log_publications ~ female + age + father_college + mother_college + ses + b_i_jeemain_score_math + b_i_jeemain_score_phys, se_type = "stata", fixed_effects = ~ department_id,  data = .) %>% 
   summary()
 ```
 
+<br/>
+Research participation:
+
+```{r}
+# randomization checks
+df %>%
+  lm_robust(bfac_research_participation ~ female + age + father_college + mother_college + ses, se_type = "stata", fixed_effects = ~ department_id,  data = .) %>%
+  summary()
+```
+
+<br/>
+Research hours:
+
+```{r}
+df %>%
+  lm_robust(bfac_hours_research ~ female + age + father_college + mother_college + ses + b_i_jeemain_score_math + b_i_jeemain_score_phys, se_type = "stata", fixed_effects = ~ department_id,  data = .) %>% 
+  summary()
+```
+
+<br/>
+Undergrads work on research:
+
+```{r}
+df %>%
+  lm_robust(bfac_underrsch ~ female + age + father_college + mother_college + ses + b_i_jeemain_score_math + b_i_jeemain_score_phys, se_type = "stata", fixed_effects = ~ department_id,  data = .) %>% 
+  summary()
+```
+
+<br/>
 
 \newpage
 
+## Teaching treatments
+
+<br/>
+Active teaching:
+
 ```{r}
-lm0 <-
-  df %>% 
-  lm_robust(z_fluency ~ bfac_log_publications + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid, data = .)
-
-lm1 <-
-  df %>% 
-  lm_robust(z_uniqueness ~ bfac_log_publications + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-lm2 <-
-  df %>% 
-  lm_robust(z_flexibility ~ bfac_log_publications + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-
-screenreg(list(lm0, lm1, lm2), custom.note = "%stars \n All continuous variables are standardized. \n All models control for student background characteristics and department fixed effects. \n Standard errors clustered at department level.", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1))
+df %>%
+  lm_robust(z_activefac ~ female + age + father_college + mother_college + ses + b_i_jeemain_score_math + b_i_jeemain_score_phys, se_type = "stata", fixed_effects = ~ department_id,  data = .) %>% 
+  summary()
 ```
 
-
-## Research related factors
-
-### Fluency
+<br/>
+Hours teaching:
 
 ```{r}
-lm0 <-
-  df %>% 
-  lm_robust(z_fluency ~ bfac_log_publications + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid, data = .)
-
-lm1 <-
-  df %>% 
-  lm_robust(z_fluency ~ bfac_research_participation + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-lm2 <-
-  df %>% 
-  lm_robust(z_fluency ~ bfac_hours_research + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-lm3 <-
-  df %>% 
-  lm_robust(z_fluency ~ bfac_underrsch + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-
-screenreg(list(lm0, lm1, lm2, lm3), custom.note = "%stars \n All continuous variables are standardized. \n All models control for student background characteristics and department fixed effects. \n Standard errors clustered at department level.", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1))
+df %>%
+  lm_robust(bfac_hours_teaching ~ female + age + father_college + mother_college + ses + b_i_jeemain_score_math + b_i_jeemain_score_phys, se_type = "stata", fixed_effects = ~ department_id,  data = .) %>% 
+  summary()
 ```
 
-\newpage
-
-### Uniqueness
-
-```{r}
-lm0 <-
-  df %>% 
-  lm_robust(z_uniqueness ~ bfac_log_publications + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-lm1 <-
-  df %>% 
-  lm_robust(z_uniqueness ~ bfac_research_participation + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-lm2 <-
-  df %>% 
-  lm_robust(z_uniqueness ~ bfac_hours_research + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-lm3 <-
-  df %>% 
-  lm_robust(z_uniqueness ~ bfac_underrsch + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-
-screenreg(list(lm0, lm1, lm2, lm3), custom.note = "%stars \n All continuous variables are standardized. \n All models control for student background characteristics and department fixed effects. \n Standard errors clustered at department level.", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1))
-```
-
-\newpage
-
-### Flexibility
+<br/>
+Hours teaching undergrads:
 
 ```{r}
-lm0 <-
-  df %>% 
-  lm_robust(z_flexibility ~ bfac_log_publications + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-lm1 <-
-  df %>% 
-  lm_robust(z_flexibility ~ bfac_research_participation + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-lm2 <-
-  df %>% 
-  lm_robust(z_flexibility ~ bfac_hours_research + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-lm3 <-
-  df %>% 
-  lm_robust(z_flexibility ~ bfac_underrsch + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-
-screenreg(list(lm0, lm1, lm2, lm3), custom.note = "%stars \n All continuous variables are standardized. \n All models control for student background characteristics and department fixed effects. \n Standard errors clustered at department level.", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1))
-```
-
-
-
-\newpage
-
-## Teaching related factors
-
-### Fluency
-
-```{r}
-lm1 <-
-  df %>% 
-  lm_robust(z_fluency ~ z_activefac + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-lm2 <-
-  df %>% 
-  lm_robust(z_fluency ~ bfac_hours_teaching + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-lm3 <-
-  df %>% 
-  lm_robust(z_fluency ~ bfac_hours_teach_under + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-
-screenreg(list(lm1, lm2, lm3), custom.note = "%stars \n All continuous variables are standardized. \n All models control for student background characteristics and department fixed effects. \n Standard errors clustered at department level.", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1))
-```
-
-\newpage
-
-### Uniqueness
-
-```{r}
-lm1 <-
-  df %>% 
-  lm_robust(z_uniqueness ~ z_activefac + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-lm2 <-
-  df %>% 
-  lm_robust(z_uniqueness ~ bfac_hours_teaching + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-lm3 <-
-  df %>% 
-  lm_robust(z_uniqueness ~ bfac_hours_teach_under + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-
-screenreg(list(lm1, lm2, lm3), custom.note = "%stars \n All continuous variables are standardized. \n All models control for student background characteristics and department fixed effects. \n Standard errors clustered at department level.", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1))
-```
-
-\newpage
-
-### Flexibility
-
-```{r}
-lm1 <-
-  df %>% 
-  lm_robust(z_flexibility ~ z_activefac + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-lm2 <-
-  df %>% 
-  lm_robust(z_flexibility ~ bfac_hours_teaching + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-lm3 <-
-  df %>% 
-  lm_robust(z_flexibility ~ bfac_hours_teach_under + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", clusters = classid, fixed_effects = ~ classid,  data = .)
-
-
-screenreg(list(lm1, lm2, lm3), custom.note = "%stars \n All continuous variables are standardized. \n All models control for student background characteristics and department fixed effects. \n Standard errors clustered at department level.", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1))
+df %>%
+  lm_robust(bfac_hours_teach_under ~ female + age + father_college + mother_college + ses + b_i_jeemain_score_math + b_i_jeemain_score_phys, se_type = "stata", fixed_effects = ~ department_id,  data = .) %>% 
+  summary()
 ```

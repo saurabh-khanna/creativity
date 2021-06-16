@@ -1,5 +1,5 @@
 ---
-title: "Analysis for CR Paper - Cross-country comparison"
+title: "Analysis for CR Paper"
 date: "`r Sys.Date()`"
 output: 
   pdf_document:
@@ -17,11 +17,11 @@ pacman::p_load(tidyverse, haven, texreg, estimatr, survey, srvyr)
 # Parameters
 df_all <- read_dta(here::here("data", "x_ee.dta")) %>% as_survey_design(univcode, weights = sw_f)
 
-#df_all %>% glimpse()
 ```
 
+##  Cross-country comparison
 
-## All
+### All
 
 ```{r}
 lm1 <-
