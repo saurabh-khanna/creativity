@@ -12,12 +12,13 @@ knitr::opts_chunk$set(echo = TRUE,  message=FALSE, warning=FALSE, fig.retina = 4
 
 ```{r}
 # Libraries
-pacman::p_load(tidyverse, haven, texreg, estimatr, survey, srvyr)
+pacman::p_load(tidyverse, haven, texreg, estimatr, survey, srvyr, shrink)
 
 # Parameters
-df_all <- read_dta(here::here("data", "x_ee.dta")) %>% as_survey_design(univcode, weights = sw_f)
-
+df <- read_dta(here::here("data", "x.dta"))
+df_all <- df %>% as_survey_design(univcode, weights = sw_f)
 ```
+
 
 ##  Cross-country comparison
 

@@ -1,0 +1,163 @@
+---
+title: "Supplementary Analysis for CR Paper"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: 4
+    keep_tex: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,  message=FALSE, warning=FALSE, fig.retina = 4)
+```
+
+```{r}
+# Libraries
+pacman::p_load(tidyverse, haven, texreg, estimatr, survey, srvyr, shrink, ggcorrplot)
+
+# Parameters
+df <- read_dta(here::here("data", "x.dta"))
+df2 <- read_dta(here::here("data", "studata.dta"))
+```
+
+
+# Correlations
+
+## Aggregated to department level across all countries
+
+```{r}
+x <-
+  df2 %>%
+  group_by(department_id) %>% 
+  summarize_at(vars(contains(c("score_perc", "b_cr_")) & starts_with("b")), ~ mean(., na.rm = T)) %>% 
+  select(-department_id) %>% 
+  janitor::remove_empty() %>% 
+  rename(
+    ct = b_ct_score_perc,
+    ql = b_ql_score_perc,
+    rr = b_rr_score_perc,
+    math_g1 = b_math_g1_score_perc,
+    math_g3 = b_math_g3_score_perc,
+    phys_g1 = b_physics_g1_score_perc,
+    phys_g3 = b_physics_g3_score_perc,
+    fluency = b_cr_fluency_score,
+    uniqueness = b_cr_uniqueness_score,
+    flexibility = b_cr_flexibility_score
+  )
+
+ggcorrplot(cor(x, use = "pairwise.complete.obs"), type = "lower", lab = TRUE)
+```
+
+
+## Student level by country
+
+### India (Baseline year 1)
+
+```{r}
+x <- df2 %>% filter(country == "India", grade == 2) %>% select(fluency = b_cr_fluency_score, uniqueness = b_cr_uniqueness_score, flexibility = b_cr_flexibility_score, math_g1 = b_math_g1_score, physics_g1 = b_physics_g1_score)
+
+ggcorrplot(cor(x, use = "pairwise.complete.obs"), type = "lower", lab = TRUE)
+```
+
+### India (Baseline year 3)
+
+```{r}
+x <- df2 %>% filter(country == "India", grade == 4) %>% select(fluency = b_cr_fluency_score, uniqueness = b_cr_uniqueness_score, flexibility = b_cr_flexibility_score, math_g3 = b_math_g3_score, physics_g3 = b_physics_g3_score)
+
+ggcorrplot(cor(x, use = "pairwise.complete.obs"), type = "lower", lab = TRUE)
+```
+
+
+### China (Baseline years 1/3)
+
+```{r}
+x <- df2 %>% filter(country == "China") %>% select(fluency = b_cr_fluency_score, uniqueness = b_cr_uniqueness_score, flexibility = b_cr_flexibility_score, ct = b_ct_score)
+
+ggcorrplot(cor(x, use = "pairwise.complete.obs"), type = "lower", lab = TRUE)
+```
+
+```{r}
+x <- df2 %>% filter(country == "China") %>% select(fluency = b_cr_fluency_score, uniqueness = b_cr_uniqueness_score, flexibility = b_cr_flexibility_score, ql = b_ql_score)
+
+ggcorrplot(cor(x, use = "pairwise.complete.obs"), type = "lower", lab = TRUE)
+```
+
+
+### Russia (Baseline years 1/3)
+
+```{r}
+x <- df2 %>% filter(country == "Russia") %>% select(fluency = b_cr_fluency_score, uniqueness = b_cr_uniqueness_score, flexibility = b_cr_flexibility_score, ct = b_ct_score)
+
+ggcorrplot(cor(x, use = "pairwise.complete.obs"), type = "lower", lab = TRUE)
+```
+
+```{r}
+x <- df2 %>% filter(country == "Russia") %>% select(fluency = b_cr_fluency_score, uniqueness = b_cr_uniqueness_score, flexibility = b_cr_flexibility_score, ql = b_ql_score)
+
+ggcorrplot(cor(x, use = "pairwise.complete.obs"), type = "lower", lab = TRUE)
+```
+
+
+\newpage
+
+# Empirical Bayes Shrinkage
+
+Model: $score_{cr} = endline_{0/1} + departmentId$
+
+Department coefficients (raw and shrunk):
+
+```{r, include=FALSE}
+vector <- c("endline", (df %>% distinct(department_id) %>% arrange(department_id) %>% pull(department_id)))
+
+table1 <-
+  df %>% 
+  lm(z_fluency ~ endline + department_id - 1, data = ., x = TRUE, y = TRUE) %>% 
+  shrink(method = "dfbeta") %>% 
+  summary() %>%  
+  as_tibble() %>% 
+  cbind(vector) %>% 
+  janitor::clean_names() %>% 
+  transmute(coefficient = vector, estimate_fluency = estimate, estimate_shrunk_fluency = p_shrunken_estimate) %>% 
+  mutate_at(vars(contains("estimate")), ~ round(., 4))
+
+table2 <-
+  df %>% 
+  lm(z_uniqueness ~ endline + department_id - 1, data = ., x = TRUE, y = TRUE) %>% 
+  shrink(method = "dfbeta") %>% 
+  summary() %>%  
+  as_tibble() %>% 
+  cbind(vector) %>% 
+  janitor::clean_names() %>% 
+  transmute(coefficient = vector, estimate_uniqueness = estimate, estimate_shrunk_uniqueness = p_shrunken_estimate) %>% 
+  mutate_at(vars(contains("estimate")), ~ round(., 4))
+
+table3 <-
+  df %>% 
+  lm(z_flexibility ~ endline + department_id - 1, data = ., x = TRUE, y = TRUE) %>% 
+  shrink(method = "dfbeta") %>% 
+  summary() %>% 
+  as_tibble() %>% 
+  cbind(vector) %>% 
+  janitor::clean_names() %>% 
+  transmute(coefficient = vector, estimate_flexibility = estimate, estimate_shrunk_flexibility = p_shrunken_estimate) %>% 
+  mutate_at(vars(contains("estimate")), ~ round(., 4))
+
+# table1 %>% 
+#   inner_join(table2, by = "coefficient") %>% 
+#   inner_join(table3, by = "coefficient") %>% 
+#   slice(-1) %>% 
+#   mutate(country = str_sub(coefficient, 1, 1)) %>% 
+#   group_by(country) %>% 
+#   summarize_at(vars(-coefficient), ~ mean(., na.rm = T))
+```
+
+
+```{r}
+table1 %>% 
+  inner_join(table2, by = "coefficient") %>% 
+  inner_join(table3, by = "coefficient") %>% 
+  knitr::kable("latex")
+```
+
+
