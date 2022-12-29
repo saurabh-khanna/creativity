@@ -1,10 +1,16 @@
 ---
 title: "Analysis for CR Paper"
 date: "`r Sys.Date()`"
-output: 
+output:
   pdf_document:
-    toc: true
+    extra_dependencies: ["dcolumn", "booktabs", "caption"]
+    toc: yes
+    number_sections: yes
+    toc_depth: 5
+    keep_tex: yes
 ---
+
+\captionsetup[table]{labelformat=empty}
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,  message=FALSE, warning=FALSE, fig.retina = 4)
@@ -12,8 +18,10 @@ knitr::opts_chunk$set(echo = TRUE,  message=FALSE, warning=FALSE, fig.retina = 4
 
 ```{r}
 # Libraries
-pacman::p_load(tidyverse, haven, texreg, estimatr, survey, srvyr, shrink)
+pacman::p_load(tidyverse, haven, texreg, estimatr, survey, srvyr, corrr)
+```
 
+```{r}
 # Parameters
 df <- read_dta(here::here("data", "x.dta"))
 df_all <- df %>% as_survey_design(univcode, weights = sw_f)
@@ -22,58 +30,324 @@ df_all <- df %>% as_survey_design(univcode, weights = sw_f)
 
 ##  Cross-country comparison
 
-### All
+### FACTOR SCORES [New]
 
 ```{r}
+# GAINS
+
 lm1 <-
   df_all %>%
-  filter(country == "Russia" & !is.na(z_flexibility) & grade == 1 & endline == 0 & stu_merge != 2) %>% 
-  svyglm(z_flexibility ~ 1, design = .)
+  filter(country == "India" & !is.na(z_fluency) & grade == 1 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_fluency ~ 1, design = .)
 
 lm2 <-
   df_all %>%
-  filter(country == "Russia" & !is.na(z_flexibility) & grade == 3 & endline == 0 & stu_merge != 2) %>% 
-  svyglm(z_flexibility ~ 1, design = .)
+  filter(country == "India" & !is.na(z_fluency) & grade == 3 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_fluency ~ 1, design = .)
 
 lm3 <-
   df_all %>%
-  filter(country == "Russia" & !is.na(z_flexibility) & grade == 3 & endline == 1 & stu_merge != 1) %>% 
-  svyglm(z_flexibility ~ 1, design = .)
+  filter(country == "India" & !is.na(z_fluency) & grade == 3 & endline == 1 & stu_merge != 1) %>% 
+  svyglm(z_fluency ~ 1, design = .)
 
 lm4 <-
   df_all %>% 
-  filter(country == "Russia" & !is.na(z_flexibility) & grade == 3 & stu_merge == 3) %>% 
-  svyglm(z_flexibility ~ endline, design = .)
+  filter(country == "India" & !is.na(z_fluency) & grade == 3 & stu_merge == 3) %>% 
+  svyglm(z_fluency ~ endline, design = .)
 
-htmlreg(list(lm1, lm2, lm3, lm4), file = "test.html", include.ci = F)
+#htmlreg(list(lm1, lm2, lm3, lm4), file = "test.html", include.ci = F)
+knitreg(list(lm1, lm2, lm3, lm4), include.ci = F)
+```
+
+
+```{r}
+# Cross country differences
+
+lm5 <-
+  df_all %>% 
+  filter(country != "China") %>% 
+  filter(!is.na(z_uniqueness) & grade == 1 & endline == 0) %>% 
+  svyglm(z_uniqueness ~ country, design = .)
+
+lm6 <-
+  df_all %>%
+  filter(country != "China") %>% 
+  filter(!is.na(z_uniqueness) & grade == 3 & endline == 0) %>% 
+  svyglm(z_uniqueness ~ country, design = .)
+
+knitreg(list(lm5, lm6), include.ci = F, digits = 3, custom.note = "%stars", stars = c(0.01, 0.05, 0.10))
+```
+
+
+
+
+
+
+
+
+### Fluency
+
+```{r}
+# GAINS
+
+lm1 <-
+  df_all %>%
+  filter(country == "India" & !is.na(z_fluency) & grade == 1 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_fluency ~ 1, design = .)
+
+lm2 <-
+  df_all %>%
+  filter(country == "India" & !is.na(z_fluency) & grade == 3 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_fluency ~ 1, design = .)
+
+lm3 <-
+  df_all %>%
+  filter(country == "India" & !is.na(z_fluency) & grade == 3 & endline == 1 & stu_merge != 1) %>% 
+  svyglm(z_fluency ~ 1, design = .)
+
+lm4 <-
+  df_all %>% 
+  filter(country == "India" & !is.na(z_fluency) & grade == 3 & stu_merge == 3) %>% 
+  svyglm(z_fluency ~ endline, design = .)
+
+#htmlreg(list(lm1, lm2, lm3, lm4), file = "test.html", include.ci = F)
+knitreg(list(lm1, lm2, lm3, lm4), include.ci = F)
+```
+
+
+```{r}
+# Cross country differences
+
+lm5 <-
+  df_all %>%
+  filter(!is.na(z_fluency) & grade == 1 & endline == 0) %>% 
+  svyglm(z_fluency ~ country, design = .)
+
+lm6 <-
+  df_all %>%
+  filter(!is.na(z_fluency) & grade == 3 & endline == 0) %>% 
+  svyglm(z_fluency ~ country, design = .)
+
+lm7 <-
+  df_all %>%
+  filter(!is.na(z_fluency) & grade == 3 & endline == 1) %>% 
+  svyglm(z_fluency ~ country, design = .)
+
+# htmlreg(list(lm5, lm6, lm7), file = "test.html", include.ci = F)
+knitreg(list(lm5, lm6, lm7), include.ci = F)
+```
+
+
+### Uniqueness [NEW]
+
+```{r}
+# GAINS
+
+lm1 <-
+  df_all %>%
+  filter(country == "Russia" & !is.na(z_uniqueness) & grade == 1 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_uniqueness ~ 1, design = .)
+
+lm2 <-
+  df_all %>%
+  filter(country == "Russia" & !is.na(z_uniqueness) & grade == 3 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_uniqueness ~ 1, design = .)
+
+lm3 <-
+  df_all %>%
+  filter(country == "Russia" & !is.na(z_uniqueness) & grade == 3 & endline == 1 & stu_merge != 1) %>% 
+  svyglm(z_uniqueness ~ 1, design = .)
+
+lm4 <-
+  df_all %>% 
+  filter(country == "Russia" & !is.na(z_uniqueness) & grade == 3 & stu_merge == 3) %>% 
+  svyglm(z_uniqueness ~ endline, design = .)
+
+#htmlreg(list(lm1, lm2, lm3, lm4), file = "test.html", include.ci = F)
+knitreg(list(lm1, lm2, lm3, lm4), include.ci = F)
+```
+
+
+```{r}
+# Cross country differences
+
+lm5 <-
+  df_all %>%
+  filter(!is.na(z_uniqueness) & grade == 1 & endline == 0) %>% 
+  svyglm(z_uniqueness ~ country, design = .)
+
+lm6 <-
+  df_all %>%
+  filter(!is.na(z_uniqueness) & grade == 3 & endline == 0) %>% 
+  svyglm(z_uniqueness ~ country, design = .)
+
+lm7 <-
+  df_all %>%
+  filter(!is.na(z_uniqueness) & grade == 3 & endline == 1) %>% 
+  svyglm(z_uniqueness ~ country, design = .)
+
+# htmlreg(list(lm5, lm6, lm7), file = "test.html", include.ci = F)
+knitreg(list(lm5, lm6, lm7), include.ci = F)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## NEW ##
+
+Percentile Tables:
+
+```{r}
+df <- read_dta(here::here("data", "studata.dta"))
+df %>% count(grade, country)
+```
+
+
+```{r}
+df_uniq <-
+  df %>% 
+  select(stdid, country, grade, contains("b_uscore1")) %>%
+  pivot_longer(cols = contains("uscore"), values_to = "b_uscore1") %>%
+  bind_cols(
+    df %>% 
+      select(stdid, country, grade, contains("b_uscore2")) %>%
+      pivot_longer(cols = contains("uscore"), values_to = "b_uscore2"),
+    df %>% 
+      select(stdid, country, grade, contains("b_uscore3")) %>%
+      pivot_longer(cols = contains("uscore"), values_to = "b_uscore3"),
+    df %>% 
+      select(stdid, country, grade, contains("b_uscore4")) %>%
+      pivot_longer(cols = contains("uscore"), values_to = "b_uscore4"),
+    df %>% 
+      select(stdid, country, grade, contains("b_uscore5")) %>%
+      pivot_longer(cols = contains("uscore"), values_to = "b_uscore5"),
+    df %>% 
+      select(stdid, country, grade, contains("b_uscore6")) %>%
+      pivot_longer(cols = contains("uscore"), values_to = "b_uscore6"),
+    df %>% 
+      select(stdid, country, grade, contains("e_uscore1")) %>%
+      pivot_longer(cols = contains("uscore"), values_to = "e_uscore1"),
+    df %>% 
+      select(stdid, country, grade, contains("e_uscore2")) %>%
+      pivot_longer(cols = contains("uscore"), values_to = "e_uscore2"),
+    df %>% 
+      select(stdid, country, grade, contains("e_uscore3")) %>%
+      pivot_longer(cols = contains("uscore"), values_to = "e_uscore3"),
+    df %>% 
+      select(stdid, country, grade, contains("e_uscore4")) %>%
+      pivot_longer(cols = contains("uscore"), values_to = "e_uscore4"),
+    df %>% 
+      select(stdid, country, grade, contains("e_uscore5")) %>%
+      pivot_longer(cols = contains("uscore"), values_to = "e_uscore5"),
+    df %>% 
+      select(stdid, country, grade, contains("e_uscore6")) %>%
+      pivot_longer(cols = contains("uscore"), values_to = "e_uscore6"),
+  ) %>% 
+  select(stdid = stdid...1, country = country...2, grade = grade...3, contains("uscore")) %>% 
+  mutate_at(vars(contains("uscore")), ~ ntile(., 10)) %>%
+  group_by(stdid, country, grade) %>% 
+  summarize_at(vars(contains("uscore")), ~ sum(., na.rm = T)) %>% 
+  ungroup() %>% 
+  mutate(
+    b_cr_uniqueness_score_new =
+      pmap_dbl(
+        select(., starts_with("b_uscore")),
+        ~ sum(c(...), na.rm = TRUE)
+      ),
+    e_cr_uniqueness_score_new =
+      pmap_dbl(
+        select(., starts_with("e_uscore")),
+        ~ sum(c(...), na.rm = TRUE)
+      )
+  ) %>% 
+  mutate(
+    b_cr_uniqueness_score_new = if_else(b_cr_uniqueness_score_new == 0, NA_real_, b_cr_uniqueness_score_new) %>% scale(.) %>% as.vector,
+    e_cr_uniqueness_score_new = if_else(e_cr_uniqueness_score_new == 0, NA_real_, e_cr_uniqueness_score_new) %>% scale(.) %>% as.vector,
+  )
 ```
 
 
 
 ```{r}
-lm5 <-
-  df_all %>%
-  filter(!is.na(z_flexibility) & grade == 1 & endline == 0) %>% 
-  svyglm(z_flexibility ~ country, design = .)
+# testing correlation with fluency scores
+df_uniq %>% 
+  select(stdid, ends_with("new")) %>% 
+  inner_join(df %>% select(stdid, contains("cr_fluency_score")), by = "stdid") %>% 
+  select(contains("_cr")) %>% 
+  correlate() %>% 
+  shave()
+  
+df_uniq %>% 
+  #inner_join(read_stata(here::here("data/b_uniq_new.dta")) %>% select(stdid)) %>% 
+  ggplot(aes(b_cr_uniqueness_score_new)) +
+  geom_histogram() +
+  facet_wrap(vars(country)) +
+  hrbrthemes::theme_ipsum()
 
-lm6 <-
-  df_all %>%
-  filter(!is.na(z_flexibility) & grade == 3 & endline == 0) %>% 
-  svyglm(z_flexibility ~ country, design = .)
+# saving new uniqueness scores
+df_uniq %>% 
+  select(stdid, ends_with("new")) %>%
+  pivot_longer(ends_with("new")) %>% 
+  transmute(
+    stdid,
+    endline = if_else(name == "e_cr_uniqueness_score_new", 1, 0),
+    z_uniqueness = value
+  ) %>% 
+  summary()
+  # write_dta(here::here("data/uniq_ranks.dta"), version = 13)
+```
 
-lm7 <-
-  df_all %>%
-  filter(!is.na(z_flexibility) & grade == 3 & endline == 1) %>% 
-  svyglm(z_flexibility ~ country, design = .)
+```{r}
+df_temp <-
+  df %>%
+  filter(country == "Russia", grade == 4)
 
-htmlreg(list(lm5, lm6, lm7), file = "test.html", include.ci = F)
+quantile(round(df_temp$b_cr_flexibility_score_new/.36, 2), probs = c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = T) 
+```
+
+```{r}
+df_temp <-
+  df %>%
+  filter(country == "Russia", grade == 4)
+
+round(length(df_temp$e_cr_fluency_score[df_temp$e_cr_fluency_score <= 1])/length(df_temp$e_cr_fluency_score), 4)
 ```
 
 
+```{r}
+df %>%
+  group_by(country) %>% 
+  summarize(b_cr_fluency_score = median(e_cr_fluency_score, na.rm = TRUE))
+```
 
 
+### Mean gains
 
+```{r}
+df %>% 
+  filter(grade == 4, country == "Russia") %>% 
+  select(contains("fluency")) %>% 
+  mutate_all(~ . /.36) %>% 
+  summary()
 
+21.335-10.702
+34.170-29.692
+37.568-22.014
+```
 
 
 

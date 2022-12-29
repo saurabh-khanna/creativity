@@ -1,0 +1,731 @@
+---
+title: "Analysis for Creativity Paper"
+date: "`r format(Sys.Date(), format='%B %d, %Y')`"
+output:
+  pdf_document:
+    extra_dependencies: ["dcolumn", "booktabs", "caption"]
+    toc: yes
+    number_sections: yes
+    toc_depth: 5
+    keep_tex: yes
+---
+
+\captionsetup[table]{labelformat=empty}
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.retina = 4)
+```
+
+```{r}
+# Libraries
+pacman::p_load(tidyverse, haven, texreg, estimatr, survey, srvyr, corrr, ggcorrplot)
+```
+
+```{r}
+# Parameters
+df <- read_dta(here::here("data", "x.dta"))
+df_all <- df %>% as_survey_design(univcode, weights = sw_f)
+
+#read_dta("../data/b_uniq_new.dta") %>% sample_frac() %>% head()
+```
+
+\newpage
+
+#  Cross-country comparisons
+
+## Fluency
+
+```{r, eval=F}
+# GAINS
+c1 <-
+  df_all %>%
+  filter(country == "China" & !is.na(z_fluency) & grade == 1 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_fluency ~ 1, design = .)
+
+c2 <-
+  df_all %>%
+  filter(country == "China" & !is.na(z_fluency) & grade == 3 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_fluency ~ 1, design = .)
+
+i1 <-
+  df_all %>%
+  filter(country == "India" & !is.na(z_fluency) & grade == 1 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_fluency ~ 1, design = .)
+
+i2 <-
+  df_all %>%
+  filter(country == "India" & !is.na(z_fluency) & grade == 3 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_fluency ~ 1, design = .)
+
+r1 <-
+  df_all %>%
+  filter(country == "Russia" & !is.na(z_fluency) & grade == 1 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_fluency ~ 1, design = .)
+
+r2 <-
+  df_all %>%
+  filter(country == "Russia" & !is.na(z_fluency) & grade == 3 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_fluency ~ 1, design = .)
+
+
+knitreg(list(c1, c2, i1, i2, r1, r2), include.ci = F, digits = 3)
+```
+
+```{=latex}
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+\multicolumn{1}{c}{\textbf{}} &
+\multicolumn{1}{c}{\textbf{Year 1}} &
+\multicolumn{1}{c}{\textbf{Year 3}} \\ 
+\midrule
+China                               & 0.762     & 0.866       \\
+                                    & (0.043)   & (0.065)     \\
+India                               & -0.723    & -0.633      \\
+                                    & (0.031)   & (0.033)     \\
+Russia                              & 0.172     & 0.216       \\
+                                    & (0.042)   & (0.059)     \\\\
+China$-$India                       & 1.484***  & 1.499***    \\
+                                    & (0.053)   & (0.073)     \\
+India$-$Russia                      & -0.895*** & -0.849***   \\
+                                    & (0.052)   & (0.068)     \\
+Russia$-$China                      & -0.590*** & -0.650***   \\
+                                    & (0.060)   & (0.088)     \\ 
+\bottomrule
+$***p < 0.01; **p < 0.05; *p < 0.10$ &          &          \\ 
+\end{tabular}
+\end{table}
+```
+
+Notes:
+
+1. Estimates are reported as effect sizes (in SD units). Fluency scores were converted into z-scores using the mean and SD of the entire cross-national sample of test takers. As such, the overall mean of the standardized fluency score across all three countries is zero.
+
+
+\newpage
+
+## Uniqueness
+
+```{r, eval=F}
+# GAINS
+c1 <-
+  df_all %>%
+  filter(country == "China" & !is.na(z_uniqueness) & grade == 1 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_uniqueness ~ 1, design = .)
+
+c2 <-
+  df_all %>%
+  filter(country == "China" & !is.na(z_uniqueness) & grade == 3 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_uniqueness ~ 1, design = .)
+
+i1 <-
+  df_all %>%
+  filter(country == "India" & !is.na(z_uniqueness) & grade == 1 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_uniqueness ~ 1, design = .)
+
+i2 <-
+  df_all %>%
+  filter(country == "India" & !is.na(z_uniqueness) & grade == 3 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_uniqueness ~ 1, design = .)
+
+r1 <-
+  df_all %>%
+  filter(country == "Russia" & !is.na(z_uniqueness) & grade == 1 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_uniqueness ~ 1, design = .)
+
+r2 <-
+  df_all %>%
+  filter(country == "Russia" & !is.na(z_uniqueness) & grade == 3 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(z_uniqueness ~ 1, design = .)
+
+
+knitreg(list(c1, c2, i1, i2, r1, r2), include.ci = F, digits = 3)
+```
+
+```{=latex}
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+\multicolumn{1}{c}{\textbf{}} &
+  \multicolumn{1}{c}{\textbf{Year 1}} &
+  \multicolumn{1}{c}{\textbf{Year 3}} \\ \midrule
+China                                 & 0.432    & 0.542   \\
+                                      & (0.040)   & (0.058)      \\
+India                                 & -0.672 & -0.570 \\
+                                      & (0.036)   & (0.040)      \\
+Russia                                & 0.558  & 0.626    \\
+                                      & (0.053)   & (0.074)      \\\\
+China$-$India                         & 1.104***  & 1.112***          \\
+                                      & (0.054)   & (0.071)         \\
+India$-$Russia                        & -1.231*** & -1.196***        \\
+                                      & (0.064)   & (0.084)           \\
+Russia$-$China                        & 0.126*    & 0.084           \\
+                                      & (0.066)   & (0.094)         \\ \bottomrule
+$***p < 0.01; **p < 0.05; *p < 0.10$ &          &           \\ 
+\end{tabular}
+\end{table}
+```
+
+
+Notes:
+
+1. Estimates are reported as effect sizes (in SD units). Uniqueness scores were converted into z-scores using the mean and SD of the entire cross-national sample of test takers. As such, the overall mean of the standardized uniqueness score across all three countries is zero.
+
+\newpage
+
+# Experiment Results
+
+```{r}
+df <-
+  read_dta(here::here("37deps", "37copy.dta")) %>%
+  mutate(univcode = str_sub(department_id, 1, 5)) %>% 
+  group_by(stdid, univcode, department_id, grade, z_fluency, z_uniqueness, reservation, female, age, father_college, mother_college, ses) %>% 
+  summarize(
+    # fac teaching
+    z_activefac = sum(tpi_score3 * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE), # change as needed
+    bfac_hours_teaching = sum(bfac_hours_teaching * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+    # fac research
+    bfac_hours_research = sum(bfac_hours_research * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+    bfac_publications = sum(bfac_publications * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+    # fac controls
+    bfac_reservation = sum(bfac_reservation * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+    bfac_associate_professor = sum(bfac_associate_professor * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+    bfac_professor = sum(bfac_professor * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+    bfac_yearsinhighed = sum(bfac_yearsinhighed * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+    bfac_highest_degree_phd = sum(bfac_highest_degree_phd * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+    bfac_highest_degree_phd_in_prog = sum(bfac_highest_degree_phd_in_prog * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+    bfac_degree_univ_elite = sum(bfac_degree_univ_elite * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
+    bfac_female = sum(bfac_female * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE)
+  ) %>%
+  ungroup() %>% 
+  mutate_at(vars("z_activefac", "z_fluency", "z_uniqueness"), ~ scale(.) %>% as.vector) %>% 
+  mutate(
+    bfac_log_publications = log(bfac_publications)
+  )
+
+# df %>% skimr::skim()
+```
+
+
+
+## Fluency
+
+### Effect of faculty research
+
+```{r, results='asis'}
+lm1 <-
+  df %>% 
+  lm_robust(z_fluency ~ bfac_log_publications, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm2 <-
+  df %>% 
+  lm_robust(z_fluency ~ bfac_hours_research, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm3 <-
+  df %>% 
+  lm_robust(z_fluency ~ bfac_log_publications + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm4 <-
+  df %>% 
+  lm_robust(z_fluency ~ bfac_hours_research + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm5 <-
+  df %>% 
+  lm_robust(z_fluency ~ bfac_log_publications + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm6 <-
+  df %>% 
+  lm_robust(z_fluency ~ bfac_hours_research + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+
+knitreg(list(lm1, lm2, lm3, lm4, lm5, lm6), custom.note = "%stars. All models control for department fixed effects. Standard errors clustered at department level.", stars = c(0.01, 0.05, 0.10), digits = 3, include.ci = FALSE, dcolumn = TRUE, booktabs = TRUE, float.pos = "h", include.rsquared = F, include.adjrs = F, include.rmse = F, custom.model.names = c("I", "II", "III", "IV", "V", "VI"), custom.coef.names = c("Faculty Log Publications", "Faculty Research Hours", "Student Reservation Status", "Student is female", "Student age", "Student's father attended college", "Student's mother attended college", "Student SES", "Faculty Reservation Status", "Associate professor", "Professor", "Faculty Experience in years", "Faculty Highest degree PhD", "Faculty Highest degree PhD ongoing", "Faculty degree college is elite", "Faculty is Female"), caption = "Effect of faculty research on student fluency scores")
+```
+
+
+\newpage
+
+### Effect of faculty teaching
+
+
+```{r, results='asis'}
+lm1 <-
+  df %>% 
+  lm_robust(z_fluency ~ z_activefac, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm2 <-
+  df %>% 
+  lm_robust(z_fluency ~ bfac_hours_teaching, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm3 <-
+  df %>% 
+  lm_robust(z_fluency ~ z_activefac + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm4 <-
+  df %>% 
+  lm_robust(z_fluency ~ bfac_hours_teaching + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm5 <-
+  df %>% 
+  lm_robust(z_fluency ~ z_activefac + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm6 <-
+  df %>% 
+  lm_robust(z_fluency ~ bfac_hours_teaching + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+
+knitreg(list(lm1, lm2, lm3, lm4, lm5, lm6), custom.note = "%stars. All models control for department fixed effects. Standard errors clustered at department level.", stars = c(0.01, 0.05, 0.10), digits = 3, include.ci = FALSE, dcolumn = TRUE, booktabs = TRUE, float.pos = "h", include.rsquared = F, include.adjrs = F, include.rmse = F, custom.model.names = c("I", "II", "III", "IV", "V", "VI"), caption = "Effect of faculty teaching on student fluency scores", custom.coef.names = c("Active Learning in Class", "Faculty Teaching Hours", "Student Reservation Status", "Student is female", "Student age", "Student's father attended college", "Student's mother attended college", "Student SES", "Faculty Reservation Status", "Associate professor", "Professor", "Faculty Experience in years", "Faculty Highest degree PhD", "Faculty Highest degree PhD ongoing", "Faculty degree college is elite", "Faculty is Female"))
+```
+
+
+\newpage
+
+## Uniqueness
+
+### Effect of faculty research
+
+Uniqueness scores are calculated at the national level for India for the models below.
+
+```{r, results='asis'}
+lm1 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ bfac_log_publications, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm2 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ bfac_hours_research, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm3 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ bfac_log_publications + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm4 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ bfac_hours_research + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm5 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ bfac_log_publications + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm6 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ bfac_hours_research + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+
+knitreg(list(lm1, lm2, lm3, lm4, lm5, lm6), custom.note = "%stars. All models control for department fixed effects. Standard errors clustered at department level.", stars = c(0.01, 0.05, 0.10), digits = 3, include.ci = FALSE, dcolumn = TRUE, booktabs = TRUE, float.pos = "h", include.rsquared = F, include.adjrs = F, include.rmse = F, custom.model.names = c("I", "II", "III", "IV", "V", "VI"), custom.coef.names = c("Faculty Log Publications", "Faculty Research Hours", "Student Reservation Status", "Student is female", "Student age", "Student's father attended college", "Student's mother attended college", "Student SES", "Faculty Reservation Status", "Associate professor", "Professor", "Faculty Experience in years", "Faculty Highest degree PhD", "Faculty Highest degree PhD ongoing", "Faculty degree college is elite", "Faculty is Female"), caption = "Effect of faculty research on student uniqueness scores")
+```
+
+
+\newpage
+
+Uniqueness scores are calculated at the experimental sample level (37 departments) for India for the models below.
+
+```{r}
+deplist <- df %>% distinct(department_id) %>% pull(department_id)
+
+df_temp <-
+  read_dta(here::here("data/for_factor_analysis", "all_baseline_scored.dta")) %>%
+  filter(country == "India") %>% 
+  mutate(grade = str_sub(stdid, 8, 8)) %>%
+  filter(grade == 3) %>% 
+  select(stdid, contains("response_std")) %>% 
+  pivot_longer(contains("response_std"), names_to = "prompt", values_to = "response") %>% 
+  filter(response != "") %>% 
+  mutate(prompt = str_sub(prompt, 13, 13)) %>%
+  mutate(
+    prompt = case_when(
+      prompt == "1" ~ "shoe",
+      prompt == "2" ~ "button",
+      prompt == "3" ~ "key",
+      prompt == "4" ~ "wooden pencil",
+      prompt == "5" ~ "automobile tire",
+      prompt == "6" ~ "eyeglasses",
+    ),
+    department_id = str_sub(stdid, 1, 7)
+  ) %>% 
+  relocate(stdid, department_id) %>% 
+  filter(department_id %in% deplist)
+
+df_uniq2 <-
+  df_temp %>% 
+  count(prompt, response) %>% 
+  mutate(unique = 1/n) %>% 
+  select(-n) %>% 
+  inner_join(df_temp, ., by = c("prompt", "response")) %>% 
+  group_by(stdid) %>% 
+  summarize(uniqueness = sum(unique, na.rm = T)) %>% 
+  transmute(stdid, z_uniqueness2 = scale(uniqueness) %>% as.vector)
+```
+
+
+
+```{r, results='asis'}
+lm1 <-
+  df %>% 
+  left_join(df_uniq2, by = "stdid") %>% 
+  lm_robust(z_uniqueness2 ~ bfac_log_publications, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm2 <-
+  df %>% 
+  left_join(df_uniq2, by = "stdid") %>% 
+  lm_robust(z_uniqueness2 ~ bfac_hours_research, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm3 <-
+  df %>% 
+  left_join(df_uniq2, by = "stdid") %>% 
+  lm_robust(z_uniqueness2 ~ bfac_log_publications + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm4 <-
+  df %>% 
+  left_join(df_uniq2, by = "stdid") %>% 
+  lm_robust(z_uniqueness2 ~ bfac_hours_research + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm5 <-
+  df %>% 
+  left_join(df_uniq2, by = "stdid") %>% 
+  lm_robust(z_uniqueness2 ~ bfac_log_publications + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm6 <-
+  df %>% 
+  left_join(df_uniq2, by = "stdid") %>% 
+  lm_robust(z_uniqueness2 ~ bfac_hours_research + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+
+knitreg(list(lm1, lm2, lm3, lm4, lm5, lm6), custom.note = "%stars. All models control for department fixed effects. Standard errors clustered at department level.", stars = c(0.01, 0.05, 0.10), digits = 3, include.ci = FALSE, dcolumn = TRUE, booktabs = TRUE, float.pos = "h", include.rsquared = F, include.adjrs = F, include.rmse = F, custom.model.names = c("I", "II", "III", "IV", "V", "VI"), custom.coef.names = c("Faculty Log Publications", "Faculty Research Hours", "Student Reservation Status", "Student is female", "Student age", "Student's father attended college", "Student's mother attended college", "Student SES", "Faculty Reservation Status", "Associate professor", "Professor", "Faculty Experience in years", "Faculty Highest degree PhD", "Faculty Highest degree PhD ongoing", "Faculty degree college is elite", "Faculty is Female"), caption = "Effect of faculty research on student uniqueness scores")
+```
+
+\newpage
+
+Uniqueness scores are calculated at the department level for the models below.
+
+```{r}
+df_uniq3 <-
+  df_temp %>% 
+  count(department_id, prompt, response) %>% 
+  mutate(unique = 1/n) %>% 
+  select(-n) %>% 
+  inner_join(df_temp, ., by = c("department_id", "prompt", "response")) %>% 
+  group_by(stdid) %>% 
+  summarize(uniqueness = sum(unique, na.rm = T)) %>% 
+  transmute(stdid, z_uniqueness3 = scale(uniqueness) %>% as.vector)
+```
+
+
+```{r, results='asis'}
+lm1 <-
+  df %>% 
+  left_join(df_uniq3, by = "stdid") %>% 
+  lm_robust(z_uniqueness3 ~ bfac_log_publications, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm2 <-
+  df %>% 
+  left_join(df_uniq3, by = "stdid") %>% 
+  lm_robust(z_uniqueness3 ~ bfac_hours_research, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm3 <-
+  df %>% 
+  left_join(df_uniq3, by = "stdid") %>% 
+  lm_robust(z_uniqueness3 ~ bfac_log_publications + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm4 <-
+  df %>% 
+  left_join(df_uniq3, by = "stdid") %>% 
+  lm_robust(z_uniqueness3 ~ bfac_hours_research + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm5 <-
+  df %>% 
+  left_join(df_uniq3, by = "stdid") %>% 
+  lm_robust(z_uniqueness3 ~ bfac_log_publications + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm6 <-
+  df %>% 
+  left_join(df_uniq3, by = "stdid") %>% 
+  lm_robust(z_uniqueness3 ~ bfac_hours_research + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+
+knitreg(list(lm1, lm2, lm3, lm4, lm5, lm6), custom.note = "%stars. All models control for department fixed effects. Standard errors clustered at department level.", stars = c(0.01, 0.05, 0.10), digits = 3, include.ci = FALSE, dcolumn = TRUE, booktabs = TRUE, float.pos = "h", include.rsquared = F, include.adjrs = F, include.rmse = F, custom.model.names = c("I", "II", "III", "IV", "V", "VI"), custom.coef.names = c("Faculty Log Publications", "Faculty Research Hours", "Student Reservation Status", "Student is female", "Student age", "Student's father attended college", "Student's mother attended college", "Student SES", "Faculty Reservation Status", "Associate professor", "Professor", "Faculty Experience in years", "Faculty Highest degree PhD", "Faculty Highest degree PhD ongoing", "Faculty degree college is elite", "Faculty is Female"), caption = "Effect of faculty research on student uniqueness scores")
+```
+
+
+\newpage
+
+### Effect of faculty teaching
+
+Uniqueness scores are calculated at the national level for India for the models below.
+
+```{r, results='asis'}
+lm1 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ z_activefac, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm2 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ bfac_hours_teaching, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm3 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ z_activefac + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm4 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ bfac_hours_teaching + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm5 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ z_activefac + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm6 <-
+  df %>% 
+  lm_robust(z_uniqueness ~ bfac_hours_teaching + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+
+knitreg(list(lm1, lm2, lm3, lm4, lm5, lm6), custom.note = "%stars. All models control for department fixed effects. Standard errors clustered at department level.", stars = c(0.01, 0.05, 0.10), digits = 3, include.ci = FALSE, dcolumn = TRUE, booktabs = TRUE, float.pos = "h", include.rsquared = F, include.adjrs = F, include.rmse = F, custom.model.names = c("I", "II", "III", "IV", "V", "VI"), caption = "Effect of faculty teaching on student uniqueness scores", custom.coef.names = c("Active Learning in Class", "Faculty Teaching Hours", "Student Reservation Status", "Student is female", "Student age", "Student's father attended college", "Student's mother attended college", "Student SES", "Faculty Reservation Status", "Associate professor", "Professor", "Faculty Experience in years", "Faculty Highest degree PhD", "Faculty Highest degree PhD ongoing", "Faculty degree college is elite", "Faculty is Female"))
+```
+
+
+\newpage
+
+Uniqueness scores are calculated at the experimental sample level (37 departments) for India for the models below.
+
+```{r, results='asis'}
+lm1 <-
+  df %>% 
+  left_join(df_uniq2, by = "stdid") %>%
+  lm_robust(z_uniqueness2 ~ z_activefac, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm2 <-
+  df %>% 
+  left_join(df_uniq2, by = "stdid") %>%
+  lm_robust(z_uniqueness2 ~ bfac_hours_teaching, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm3 <-
+  df %>% 
+  left_join(df_uniq2, by = "stdid") %>%
+  lm_robust(z_uniqueness2 ~ z_activefac + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm4 <-
+  df %>% 
+  left_join(df_uniq2, by = "stdid") %>%
+  lm_robust(z_uniqueness2 ~ bfac_hours_teaching + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm5 <-
+  df %>% 
+  left_join(df_uniq2, by = "stdid") %>%
+  lm_robust(z_uniqueness2 ~ z_activefac + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm6 <-
+  df %>% 
+  left_join(df_uniq2, by = "stdid") %>%
+  lm_robust(z_uniqueness2 ~ bfac_hours_teaching + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+
+knitreg(list(lm1, lm2, lm3, lm4, lm5, lm6), custom.note = "%stars. All models control for department fixed effects. Standard errors clustered at department level.", stars = c(0.01, 0.05, 0.10), digits = 3, include.ci = FALSE, dcolumn = TRUE, booktabs = TRUE, float.pos = "h", include.rsquared = F, include.adjrs = F, include.rmse = F, custom.model.names = c("I", "II", "III", "IV", "V", "VI"), caption = "Effect of faculty teaching on student uniqueness scores", custom.coef.names = c("Active Learning in Class", "Faculty Teaching Hours", "Student Reservation Status", "Student is female", "Student age", "Student's father attended college", "Student's mother attended college", "Student SES", "Faculty Reservation Status", "Associate professor", "Professor", "Faculty Experience in years", "Faculty Highest degree PhD", "Faculty Highest degree PhD ongoing", "Faculty degree college is elite", "Faculty is Female"))
+```
+
+
+\newpage
+
+Uniqueness scores are calculated at the department level for the models below.
+
+```{r, results='asis'}
+lm1 <-
+  df %>% 
+  left_join(df_uniq3, by = "stdid") %>%
+  lm_robust(z_uniqueness3 ~ z_activefac, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm2 <-
+  df %>% 
+  left_join(df_uniq3, by = "stdid") %>%
+  lm_robust(z_uniqueness3 ~ bfac_hours_teaching, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm3 <-
+  df %>% 
+  left_join(df_uniq3, by = "stdid") %>%
+  lm_robust(z_uniqueness3 ~ z_activefac + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm4 <-
+  df %>% 
+  left_join(df_uniq3, by = "stdid") %>%
+  lm_robust(z_uniqueness3 ~ bfac_hours_teaching + reservation + female + age + father_college + mother_college + ses, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm5 <-
+  df %>% 
+  left_join(df_uniq3, by = "stdid") %>%
+  lm_robust(z_uniqueness3 ~ z_activefac + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+lm6 <-
+  df %>% 
+  left_join(df_uniq3, by = "stdid") %>%
+  lm_robust(z_uniqueness3 ~ bfac_hours_teaching + reservation + female + age + father_college + mother_college + ses + bfac_reservation + bfac_associate_professor + bfac_professor + bfac_yearsinhighed + bfac_highest_degree_phd + bfac_highest_degree_phd_in_prog + bfac_degree_univ_elite + bfac_female, data = ., se_type = "stata", fixed_effects = ~ department_id, clusters = department_id)
+
+
+knitreg(list(lm1, lm2, lm3, lm4, lm5, lm6), custom.note = "%stars. All models control for department fixed effects. Standard errors clustered at department level.", stars = c(0.01, 0.05, 0.10), digits = 3, include.ci = FALSE, dcolumn = TRUE, booktabs = TRUE, float.pos = "h", include.rsquared = F, include.adjrs = F, include.rmse = F, custom.model.names = c("I", "II", "III", "IV", "V", "VI"), caption = "Effect of faculty teaching on student uniqueness scores", custom.coef.names = c("Active Learning in Class", "Faculty Teaching Hours", "Student Reservation Status", "Student is female", "Student age", "Student's father attended college", "Student's mother attended college", "Student SES", "Faculty Reservation Status", "Associate professor", "Professor", "Faculty Experience in years", "Faculty Highest degree PhD", "Faculty Highest degree PhD ongoing", "Faculty degree college is elite", "Faculty is Female"))
+```
+
+
+\newpage
+
+
+# Appendix
+
+## Fluency distribution by item and country
+
+```{r, fig.retina=4, fig.asp = 1}
+read_dta(here::here("data/for_factor_analysis", "all_baseline_scored.dta")) %>% 
+  select(stdid, country, contains("response_std")) %>% 
+  pivot_longer(contains("response_std"), names_to = "prompt", values_to = "response") %>% 
+  filter(response != "") %>% 
+  mutate(prompt = str_sub(prompt, 13, 13)) %>%
+  mutate(
+    prompt = case_when(
+      prompt == "1" ~ "shoe (used as footwear)",
+      prompt == "2" ~ "button (used to fasten things)",
+      prompt == "3" ~ "key (used to open a lock)",
+      prompt == "4" ~ "wooden pencil (used for writing)",
+      prompt == "5" ~ "automobile tire (used on the wheel of automobile)",
+      prompt == "6" ~ "eyeglasses (used to improve vision)",
+    )
+  ) %>% 
+  arrange(country, stdid, prompt, response) %>% 
+  left_join(readxl::read_excel(here::here("nlp/china_translate_baseline.xlsx")), by = "response") %>% 
+  mutate(
+    response = if_else(!is.na(response_eng) & country == "China", response_eng, response),
+    response = str_to_lower(response) %>% str_squish()
+  ) %>% 
+  select(-response_eng) %>%
+  transmute(country, stdid, item = prompt, fluency = if_else(response == "", 0L, 1L)) %>%
+  mutate(
+    item = stringr::word(item) ,
+    item = if_else(item == "wooden", "pencil", item),
+    item = if_else(item == "automobile", "auto tire", item),
+  ) %>%
+  group_by(country, item, stdid) %>% 
+  summarise(fluency_score = sum(fluency, na.rm = T)) %>% 
+  arrange(stdid, item) %>% 
+  ungroup() %>% 
+  count(country, item, fluency_score) %>% 
+  group_by(country, item) %>% 
+  mutate(perc = n/sum(n)) %>% 
+  ungroup() %>% 
+  ggplot(aes(fluency_score, perc)) +
+  geom_col() +
+  facet_grid(vars(item), vars(country)) +
+  scale_x_continuous(breaks = seq(0, 6, 1)) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  theme_bw() +
+  labs(
+    x = "Fluency score",
+    y = "% of students",
+    caption = "Note: Plot excludes students with no valid answer across items."
+  )
+```
+
+\newpage
+
+
+## Correlations (student level by country)
+
+```{r}
+df2 <- read_dta(here::here("data", "studata.dta"))
+```
+
+
+### India (Baseline year 1)
+
+```{r}
+x <- df2 %>% filter(country == "India", grade == 2) %>% select(fluency = b_cr_fluency_score, uniqueness = b_cr_uniqueness_score_old, math_g1 = b_math_g1_score, physics_g1 = b_physics_g1_score)
+
+ggcorrplot(cor(x, use = "pairwise.complete.obs"), type = "lower", lab = TRUE)
+```
+
+### India (Baseline year 3)
+
+```{r}
+x <- df2 %>% filter(country == "India", grade == 4) %>% select(fluency = b_cr_fluency_score, uniqueness = b_cr_uniqueness_score_old, math_g3 = b_math_g3_score, physics_g3 = b_physics_g3_score)
+
+ggcorrplot(cor(x, use = "pairwise.complete.obs"), type = "lower", lab = TRUE)
+```
+
+
+### China (Baseline years 1/3)
+
+```{r}
+x <- df2 %>% filter(country == "China") %>% select(fluency = b_cr_fluency_score, uniqueness = b_cr_uniqueness_score_old, ct = b_ct_score)
+
+ggcorrplot(cor(x, use = "pairwise.complete.obs"), type = "lower", lab = TRUE)
+```
+
+```{r}
+x <- df2 %>% filter(country == "China") %>% select(fluency = b_cr_fluency_score, uniqueness = b_cr_uniqueness_score_old, ql = b_ql_score)
+
+ggcorrplot(cor(x, use = "pairwise.complete.obs"), type = "lower", lab = TRUE)
+```
+
+
+### Russia (Baseline years 1/3)
+
+```{r}
+x <- df2 %>% filter(country == "Russia") %>% select(fluency = b_cr_fluency_score, uniqueness = b_cr_uniqueness_score_old, ct = b_ct_score)
+
+ggcorrplot(cor(x, use = "pairwise.complete.obs"), type = "lower", lab = TRUE)
+```
+
+```{r}
+x <- df2 %>% filter(country == "Russia") %>% select(fluency = b_cr_fluency_score, uniqueness = b_cr_uniqueness_score_old, ql = b_ql_score)
+
+ggcorrplot(cor(x, use = "pairwise.complete.obs"), type = "lower", lab = TRUE)
+```
+
+
+\newpage
+
+## Balance checks
+
+### Research treatments
+
+<br/>
+log(publications):
+
+```{r}
+df %>%
+  lm_robust(bfac_log_publications ~ female + age + father_college + mother_college + ses, se_type = "stata", fixed_effects = ~ department_id,  data = .) %>% 
+  summary()
+```
+
+
+<br/>
+Research hours:
+
+```{r}
+df %>%
+  lm_robust(bfac_hours_research ~ female + age + father_college + mother_college + ses, se_type = "stata", fixed_effects = ~ department_id,  data = .) %>% 
+  summary()
+```
+
+
+
+\newpage
+
+### Teaching treatments
+
+<br/>
+Active teaching/learning:
+
+```{r}
+df %>%
+  lm_robust(z_activefac ~ female + age + father_college + mother_college + ses, se_type = "stata", fixed_effects = ~ department_id,  data = .) %>% 
+  summary()
+```
+
+<br/>
+Hours teaching:
+
+```{r}
+df %>%
+  lm_robust(bfac_hours_teaching ~ female + age + father_college + mother_college + ses, se_type = "stata", fixed_effects = ~ department_id,  data = .) %>% 
+  summary()
+```
+
+

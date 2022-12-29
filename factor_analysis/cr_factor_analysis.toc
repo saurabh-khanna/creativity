@@ -1,0 +1,5 @@
+\contentsline {section}{\numberline {1}Creativity paper: Factor analysis approach}{2}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Factor score distributions}{2}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Baseline factor loadings by country}{3}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}Cross-country regressions using factor scores}{10}{subsection.1.3}%
+\contentsline {subsubsection}{\numberline {1.3.1}Factor analysis details - Creativity baseline test}{11}{subsubsection.1.3.1}%

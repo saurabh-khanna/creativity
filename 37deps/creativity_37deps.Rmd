@@ -20,7 +20,6 @@ knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.retina
 # Libraries
 pacman::p_load(tidyverse, haven, texreg, estimatr)
 
-
 df_long <- 
   read_dta(here::here("37deps", "37copy.dta")) %>% 
   mutate(
@@ -35,12 +34,10 @@ df <-
   summarize(
     # teach
     z_activefac = sum(x13 * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE), # change as needed
-    # bfac_hours_teach_under = sum(bfac_hours_teach_under * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
     bfac_hours_teaching = sum(bfac_hours_teaching * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
     # research
     bfac_research_participation = sum(research_participation * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
     bfac_hours_research = sum(bfac_hours_research * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
-    # bfac_underrsch = sum(bfac_underrsch * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
     bfac_publications = sum(bfac_publications * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE),
     bfac_publications_dummy = sum(bfac_publications_dummy * credits, na.rm = TRUE) / sum(credits, na.rm = TRUE) # unused
   ) %>%
@@ -54,6 +51,16 @@ df <-
   )
 
 # df %>% write_dta(here::here("37deps","test.dta"), version = 13)
+
+# bring new "originality" scores in
+originality_scores <-
+  read_csv(here::here("data/nlp/new_scores.csv")) %>%
+  filter(country == "India", endline == 0) %>% 
+  select(stdid, originality, elaboration)
+
+df <- df %>% left_join(originality_scores, by = "stdid")
+
+df %>% glimpse()
 ```
 
 
@@ -62,6 +69,30 @@ df <-
 
 # Research results
 
+## Originality scores
+
+```{r, results='asis'}
+lm1 <-
+  df %>% 
+  lm_robust(originality ~ bfac_log_publications + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid, data = .)
+
+lm2 <-
+  df %>% 
+  lm_robust(originality ~ bfac_publications_dummy + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid, data = .)
+
+lm3 <-
+  df %>% 
+  lm_robust(originality ~ bfac_research_participation + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+lm4 <-
+  df %>% 
+  lm_robust(originality ~ bfac_hours_research + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+
+texreg(list(lm1, lm3, lm4), custom.note = "%stars", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1), dcolumn = TRUE, booktabs = TRUE, float.pos = "h")
+```
+
+
 ## Fluency
 
 ```{r, results='asis'}
@@ -69,9 +100,9 @@ lm1 <-
   df %>% 
   lm_robust(z_fluency ~ bfac_log_publications + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid, data = .)
 
-lm2 <-
-  df %>% 
-  lm_robust(z_fluency ~ bfac_publications_dummy + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid, data = .)
+# lm2 <-
+#   df %>% 
+#   lm_robust(z_fluency ~ bfac_publications_dummy + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid, data = .)
 
 lm3 <-
   df %>% 
@@ -82,64 +113,49 @@ lm4 <-
   lm_robust(z_fluency ~ bfac_hours_research + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
 
 
-knitreg(list(lm1, lm2, lm3, lm4), custom.note = "%stars", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1), dcolumn = TRUE, booktabs = TRUE, float.pos = "h")
+texreg(list(lm1, lm3, lm4), custom.note = "%stars", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1), dcolumn = TRUE, booktabs = TRUE, float.pos = "h")
 ```
 
 \newpage
 
-## Uniqueness
+## Elaboration
 
 ```{r, results='asis'}
 lm1 <-
   df %>% 
-  lm_robust(z_uniqueness ~ bfac_log_publications + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid, data = .)
-
-lm2 <-
-  df %>% 
-  lm_robust(z_uniqueness ~ bfac_publications_dummy + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid, data = .)
+  lm_robust(elaboration ~ bfac_log_publications + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid, data = .)
 
 lm3 <-
   df %>% 
-  lm_robust(z_uniqueness ~ bfac_research_participation + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+  lm_robust(elaboration ~ bfac_research_participation + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
 
 lm4 <-
   df %>% 
-  lm_robust(z_uniqueness ~ bfac_hours_research + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+  lm_robust(elaboration ~ bfac_hours_research + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
 
 
-knitreg(list(lm1, lm2, lm3, lm4), custom.note = "%stars", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1), dcolumn = TRUE, booktabs = TRUE, float.pos = "h")
+texreg(list(lm1, lm3, lm4), custom.note = "%stars", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1), dcolumn = TRUE, booktabs = TRUE, float.pos = "h")
 ```
 
-\newpage
-
-## Flexibility
-
-```{r, results='asis'}
-lm1 <-
-  df %>% 
-  lm_robust(z_flexibility ~ bfac_log_publications + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid, data = .)
-
-lm2 <-
-  df %>% 
-  lm_robust(z_flexibility ~ bfac_publications_dummy + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid, data = .)
-
-lm3 <-
-  df %>% 
-  lm_robust(z_flexibility ~ bfac_research_participation + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
-
-lm4 <-
-  df %>% 
-  lm_robust(z_flexibility ~ bfac_hours_research + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
-
-
-knitreg(list(lm1, lm2, lm3, lm4), custom.note = "%stars", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1), dcolumn = TRUE, booktabs = TRUE, float.pos = "h")
-```
-
-
-
-\newpage
 
 # Teaching results
+
+## Originality Scores
+
+```{r, results='asis'}
+lm1 <-
+  df %>% 
+  lm_robust(originality ~ z_activefac + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+lm2 <-
+  df %>% 
+  lm_robust(originality ~ bfac_hours_teaching + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+
+texreg(list(lm1, lm2), custom.note = "%stars", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1), dcolumn = TRUE, booktabs = TRUE, float.pos = "h")
+```
+
+\newpage
+
 
 ## Fluency
 
@@ -157,36 +173,23 @@ knitreg(list(lm1, lm2), custom.note = "%stars", omit.coef = "(female)|(college)|
 
 \newpage
 
-## Uniqueness
+## Elaboration
+
 
 ```{r, results='asis'}
 lm1 <-
   df %>% 
-  lm_robust(z_uniqueness ~ z_activefac + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+  lm_robust(elaboration ~ z_activefac + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
 
 lm2 <-
   df %>% 
-  lm_robust(z_uniqueness ~ bfac_hours_teaching + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
+  lm_robust(elaboration ~ bfac_hours_teaching + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
 
-
-knitreg(list(lm1, lm2), custom.note = "%stars", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1), dcolumn = TRUE, booktabs = TRUE, float.pos = "h")
+texreg(list(lm1, lm2), custom.note = "%stars", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1), dcolumn = TRUE, booktabs = TRUE, float.pos = "h")
 ```
 
-\newpage
 
-## Flexibility
 
-```{r, results='asis'}
-lm1 <-
-  df %>% 
-  lm_robust(z_flexibility ~ z_activefac + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
-
-lm2 <-
-  df %>% 
-  lm_robust(z_flexibility ~ bfac_hours_teaching + femaleb + femalemiss + ageb + agemiss + father_collegeb + father_collegemiss + mother_collegeb + mother_collegemiss + sesb + sesmiss + b_i_jeemain_score_mathb + b_i_jeemain_score_mathmiss + b_i_jeemain_score_physb + b_i_jeemain_score_physmiss, se_type = "stata", fixed_effects = ~ classid,  data = .)
-
-knitreg(list(lm1, lm2), custom.note = "%stars", omit.coef = "(female)|(college)|(ses)|(age)|(score)", include.ci = FALSE, stars = c(0.01, 0.05, 0.1), dcolumn = TRUE, booktabs = TRUE, float.pos = "h")
-```
 
 \newpage
 

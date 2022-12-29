@@ -1,0 +1,291 @@
+---
+title: "NLP Scoring for Creativity Paper"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    extra_dependencies: ["dcolumn", "booktabs", "caption"]
+    toc: yes
+    number_sections: yes
+    toc_depth: 5
+    keep_tex: yes
+---
+
+\captionsetup[table]{labelformat=empty}
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.retina = 4)
+```
+
+```{r}
+# Libraries
+pacman::p_load(tidyverse, haven, texreg, estimatr, janitor, survey, srvyr, corrr, kable, kableExtra, hrbrthemes)
+
+# Parameters
+df_baseline <- read_dta(here::here("data/for_factor_analysis", "all_baseline_scored.dta")) %>% select(stdid, country, contains("response_std")) %>% remove_empty()
+
+df_endline <- read_dta(here::here("data/for_factor_analysis", "all_endline_scored.dta")) %>% select(stdid, country, contains("response_std")) %>% remove_empty()
+
+# df_endline %>% filter(country == "China") %>% glimpse()
+# df_endline %>% glimpse()
+# read_dta(here::here("data/for_factor_analysis", "all_baseline_scored.dta")) %>% glimpse()
+```
+
+
+```{r}
+# fixing china translation
+# df_endline %>% 
+#   filter(country == "China") %>% 
+#   pivot_longer(contains("response_std"), names_to = "prompt", values_to = "response") %>% 
+#   filter(response != "") %>% 
+#   distinct(response) %>%
+#   arrange(response) %>% 
+#   writexl::write_xlsx("china_translate_endline.xlsx")
+
+# readxl::read_excel("china_translate_baseline.xlsx")
+# readxl::read_excel("china_translate_endline.xlsx")
+```
+
+
+
+Baseline scoring:
+
+```{r, fig.retina=4}
+df_baseline_new <-
+  df_baseline %>% 
+  pivot_longer(contains("response_std"), names_to = "prompt", values_to = "response") %>% 
+  filter(response != "") %>% 
+  mutate(prompt = str_sub(prompt, 13, 13)) %>%
+  mutate(
+    prompt = case_when(
+      prompt == "1" ~ "shoe (used as footwear)",
+      prompt == "2" ~ "button (used to fasten things)",
+      prompt == "3" ~ "key (used to open a lock)",
+      prompt == "4" ~ "wooden pencil (used for writing)",
+      prompt == "5" ~ "automobile tire (used on the wheel of automobile)",
+      prompt == "6" ~ "eyeglasses (used to improve vision)",
+    )
+  ) %>% 
+  arrange(country, stdid, prompt, response) %>% 
+  left_join(readxl::read_excel("china_translate_baseline.xlsx"), by = "response") %>% 
+  mutate(
+    response = if_else(!is.na(response_eng) & country == "China", response_eng, response),
+    response = str_to_lower(response) %>% str_squish()
+  ) %>% 
+  select(-response_eng)
+
+
+# output file for scoring
+# df_baseline_new %>%
+#   distinct(prompt, response) %>%
+#   arrange(prompt, response) %>%
+#   write_csv("scores_new_baseline.csv")
+
+
+# input scored file
+df_baseline_scored <-
+  df_baseline_new %>% 
+  inner_join(
+    read_csv("scores_new_baseline.csv"), 
+    by = c("prompt", "response")
+  )
+
+# plot distributions for baseline
+df_baseline_scored %>%
+  group_by(country, stdid) %>% 
+  summarize(
+    uniq_score = sum(originality, na.rm = T)
+  ) %>% 
+  ungroup() %>% 
+  ggplot(aes(uniq_score)) +
+  geom_histogram() +
+  theme_bw() +
+  facet_wrap(vars(country)) +
+  labs(
+    x = "Student Originality",
+    y = "Student Count"
+  )
+```
+
+
+```{r, eval=F, fig.retina=4}
+# fluency test (ignore!)
+df_baseline_new %>%
+  transmute(country, stdid, item = prompt, fluency = if_else(response == "", 0L, 1L)) %>%
+  mutate(
+    item = stringr::word(item) ,
+    item = if_else(item == "wooden", "pencil", item),
+    item = if_else(item == "automobile", "auto tire", item),
+  ) %>%
+  group_by(country, item, stdid) %>% 
+  summarise(fluency_score = sum(fluency)) %>% 
+  arrange(stdid, item) %>% 
+  ungroup() %>% 
+  count(country, item, fluency_score) %>% 
+  group_by(country, item) %>% 
+  mutate(perc = n/sum(n)) %>% 
+  ungroup() %>% 
+  ggplot(aes(fluency_score, perc)) +
+  geom_col() +
+  facet_grid(vars(item), vars(country)) +
+  scale_x_continuous(breaks = seq(0, 6, 1)) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  theme_bw()
+```
+
+
+Endline scoring:
+
+```{r, fig.retina=4}
+df_endline_new <-
+  df_endline %>% 
+  pivot_longer(contains("response_std"), names_to = "prompt", values_to = "response") %>% 
+  filter(response != "") %>% 
+  mutate(prompt = str_sub(prompt, 13, 13)) %>%
+  mutate(
+    prompt = case_when(
+      prompt == "1" ~ "chair (used for sitting)",
+      prompt == "2" ~ "watch (used for telling time)",
+      prompt == "3" ~ "safety pin (used for fastening)",
+      prompt == "4" ~ "bed sheet (used on a bed)",
+      prompt == "5" ~ "milk carton (used to hold liquid)",
+      prompt == "6" ~ "nail (used for fastening)",
+    )
+  ) %>% 
+  arrange(country, stdid, prompt, response) %>% 
+  left_join(readxl::read_excel("china_translate_endline.xlsx"), by = "response") %>% 
+  mutate(
+    response = if_else(!is.na(response_eng) & country == "China", response_eng, response),
+    response = str_to_lower(response) %>% str_squish()
+  ) %>% 
+  select(-response_eng)
+
+
+# output file for scoring
+# df_endline_new %>%
+#   distinct(prompt, response) %>%
+#   arrange(prompt, response) %>%
+#   write_csv("scores_new_endline.csv")
+
+
+# input scored file
+df_endline_scored <-
+  df_endline_new %>% 
+  inner_join(
+    read_csv("scores_new_endline.csv"), 
+    by = c("prompt", "response")
+  )
+
+# plot distributions for endline
+df_endline_scored %>%
+  group_by(country, stdid) %>% 
+  summarize(
+    uniq_score = sum(originality, na.rm = T)
+  ) %>% 
+  ungroup() %>% 
+  ggplot(aes(uniq_score)) +
+  geom_histogram() +
+  theme_bw() +
+  facet_wrap(vars(country)) +
+  labs(
+    x = "Student Originality",
+    y = "Student Count"
+  )
+```
+
+
+Creating scores for regressions:
+
+```{r}
+all_scores <-
+  df_baseline_scored %>% 
+  group_by(country, stdid) %>% 
+  summarize(
+    originality = sum(originality, na.rm = T),
+    elaboration = sum(elaboration, na.rm = T),
+  ) %>%
+  ungroup() %>% 
+  mutate_at(vars(originality, elaboration), ~ scale(.) %>% as.vector()) %>% 
+  bind_rows(
+    df_endline_scored %>% 
+      group_by(country, stdid) %>% 
+      summarize(
+        originality = sum(originality, na.rm = T),
+        elaboration = sum(elaboration, na.rm = T),
+      ) %>%
+      ungroup() %>% 
+      mutate_at(vars(originality, elaboration), ~ scale(.) %>% as.vector()),
+    .id = "endline"
+  ) %>% 
+  mutate(
+    endline = parse_integer(endline) - 1L
+  )
+
+df <-
+  read_dta(here::here("data", "x.dta")) %>%
+  left_join(all_scores, by = c("stdid", "country", "endline")) %>%
+  relocate(stdid, country, endline)
+
+df_all <- df %>% as_survey_design(univcode, weights = sw_f)
+
+#all_scores %>% write_csv(here::here("data/nlp/new_scores.csv"))
+
+#df %>% select(contains("elabor")) %>% summary()
+```
+
+
+Levels and Gains:
+
+
+```{r, eval=T}
+# Levels year 1
+lm1 <-
+  df_all %>%
+  filter(country == "Russia" & !is.na(elaboration) & grade == 1 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(elaboration ~ 1, design = .)
+
+# Levels year 3
+lm2 <-
+  df_all %>%
+  filter(country == "Russia" & !is.na(elaboration) & grade == 3 & endline == 0 & stu_merge != 2) %>% 
+  svyglm(elaboration ~ 1, design = .)
+
+# Levels year 4
+lm3 <-
+  df_all %>%
+  filter(country == "Russia" & !is.na(elaboration) & grade == 3 & endline == 1 & stu_merge != 1) %>% 
+  svyglm(elaboration ~ 1, design = .)
+
+# GAINS y3 to y4
+lm4 <-
+  df_all %>% 
+  filter(country == "Russia" & !is.na(elaboration) & grade == 3 & stu_merge == 3) %>% 
+  svyglm(elaboration ~ endline, design = .)
+
+knitreg(list(lm1, lm2, lm3, lm4), include.ci = F)
+```
+
+
+```{r, eval=F}
+# Cross country differences
+
+lm5 <-
+  df_all %>% filter(country != "China") %>% 
+  filter(!is.na(elaboration) & grade == 1 & endline == 0) %>% 
+  svyglm(elaboration ~ country, design = .)
+
+lm6 <-
+  df_all %>% filter(country != "China") %>% 
+  filter(!is.na(elaboration) & grade == 3 & endline == 0) %>% 
+  svyglm(elaboration ~ country, design = .)
+
+lm7 <-
+  df_all %>% filter(country != "China") %>% 
+  filter(!is.na(elaboration) & grade == 3 & endline == 1) %>% 
+  svyglm(elaboration ~ country, design = .)
+
+knitreg(list(lm5, lm6, lm7), include.ci = F)
+```
+
+
+
